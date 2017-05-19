@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "interpreter.h"
+#include "budget.h"
 
 #define ENTRY_TABLE_SIZE 4 
 
@@ -17,12 +18,13 @@ entry_t tab[] = {
 
 void cmd_add(args_t* args)
 {
-	fprintf(stdout, "CMD_ADD -> arg : %d", args->i);
+    fprintf(stdout, "CMD_ADD -> arg : %d", args->i);
+    debug_database(); 
 }
 
 void cmd_substract(args_t* args)
 {
-	fprintf(stdout, "CMD_ADD -> arg : %d", args->i);
+	fprintf(stdout, "CMD_SUB -> arg : %d", args->i);
 }
 
 
@@ -88,10 +90,10 @@ args_t* args_parse(const char *s)
 
 int parse(char* cmd)
 {
-	const char* tok = strtok(cmd,delimiters);
-	int i = ENTRY_TABLE_SIZE;
-	if(!tok) {
-		fprintf(stdout, "PARSE(): strtok returned NULL.\n");
+  const char* tok = strtok(cmd,delimiters);
+  int i = ENTRY_TABLE_SIZE;
+  if(!tok) {
+    fprintf(stdout, "PARSE(): strtok returned NULL.\n");
 		return 0;
 	}
 
