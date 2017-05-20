@@ -5,7 +5,7 @@
 #include "interpreter.h"
 #include "budget.h"
 
-#define ENTRY_TABLE_SIZE 4 
+#define ENTRY_TABLE_SIZE 5 
 
 const char* delimiters = " \n(,);";
 
@@ -14,12 +14,12 @@ entry_t tab[] = {
 	{"substract", cmd_substract, "i", "Substract money to database."},
 	{"set", cmd_set, "i", "Set money amount to database."},
 	{"exit", cmd_exit, " ", "Exit the program."},
+	{"debug", cmd_debug, "i", "Routine to debug the program"},
 };
 
 void cmd_add(args_t* args)
 {
     fprintf(stdout, "CMD_ADD -> arg : %d", args->i);
-    debug_database(); 
 }
 
 void cmd_substract(args_t* args)
@@ -37,6 +37,13 @@ void cmd_exit(args_t* args)
 {
 	free(args);
 	exit(0);
+}
+
+void cmd_debug(args_t* args)
+{
+    int* i = &args->i;
+    fprintf(stdout, "CMD_DEBUG -> arg : %d", args->i);
+    debug_database(i);
 }
 
 int run_interpreter(void) {

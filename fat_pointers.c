@@ -11,6 +11,6 @@ void* alloc_array(size_t data_size, int type) {
 }
 
 void dealloc_array(void* self) {
-    struct Header* head = self + sizeof(struct Header);
+    struct Header* head = self - sizeof(struct Header);
     free(head);
 }

@@ -85,6 +85,7 @@ void close_database(struct Connection* conn) {
 	if(conn->db)
 	    free(conn->db);
 	free(conn);
+	conn = NULL;
     }
 }
 /*
@@ -116,9 +117,6 @@ void set_database(struct Connection* conn, int id, int amount_money, const char*
     //struct Operation operation = {.is_set = 1, .operation_type = operation, .money = money, .time = time(NULL)};
     struct Operation* operation = &conn->db->rows[id];
 
-    if(operation->is_set)
-	exit(1);
-
     operation->is_set = 1;
 
     char* res = strncpy(operation->operation_type, operation_done, MAX_DATAS);
@@ -136,12 +134,15 @@ void set_database(struct Connection* conn, int id, int amount_money, const char*
  * return valuelinkedin
  */
 struct Operation* get_database(struct Connection* conn, Data_type_union data, Data_type dataType) {
-    int i,j,k = 0;
+    int k = 0;
+    int i = 0;
+    int j = 0;
 
     // return arrays of connection equal to the data needed
     //struct Operation* ret = malloc(sizeof(sizeof(int) + struct Operation)*MAX_ROWS); // ALLOC FROM CALLER????
     struct Operation* tmp = malloc(sizeof(struct Operation)*MAX_ROWS);
-    
+    if(!tmp)
+	exit(1);
     switch(dataType){
     case MONEY:
 	for(i = 0; i < MAX_ROWS; i++) {
@@ -224,27 +225,30 @@ void delete_database(struct Connection* conn){
     //1. get path name with readlink from /proc/self/fd/NNN where NNN is the fd
     //2. verify that the file descriptor is not moved or deleted, stat the filename given by readlink + fpath with the fd and verify for st_dev and st_ino are the same
 
-    char filedescriptor[20];
-    char filepath[20];
+    char filedescriptor[MAX_DATAS] = {"/proc/self/fd/"};
+    char* filepath = NULL;
+    size_t filepathlenght;
 
-    char* path_ptr = "/proc/self/fd/";
+    char path_ptr[MAX_DATAS] = {'\0'};
 
-    struct stat * filestat = malloc(sizeof(struct stat));
-    //itoa(conn->file, filedescriptor, 10);
-    snprintf(filedescriptor, sizeof(filedescriptor), "%d", fileno(conn->file)); //revoir attribution de la mémoire.
-    strncat(path_ptr, filedescriptor, 20);
-    int ret = readlink(path_ptr, filepath, 20);
+    snprintf(path_ptr, sizeof(filedescriptor), "%d", fileno(conn->file)); //revoir attribution de la mémoire.
+    strcat(filedescriptor, path_ptr);
+    memset(path_ptr, 0, sizeof(char)*20);
+    filepathlenght = strlen(filedescriptor);
+    filepath = (char*)malloc(filepathlenght);
+    memcpy(filepath, filedescriptor, filepathlenght);
+    int ret = readlink(filedescriptor, path_ptr, MAX_DATAS);
     if(ret < 0)
 	exit(1);
 
-    printf("File descriptor pathname: %s", filepath);
+    printf("\nFile descriptor pathname: %s\n", path_ptr);
 
-    ret = stat(filepath, filestat);
     if(!ret)
 	exit(1);
 
-    if(filestat->st_dev == filestat->st_ino) { //verify that the file is not moved or deleted
-	ret = remove(filepath);
+    if(access(path_ptr, F_OK) == 0) {
+	ret = remove(path_ptr);
+	printf("File to delete : %s", path_ptr);
 	if(!ret)
 	    exit(1);
     }
