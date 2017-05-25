@@ -10,5 +10,7 @@ void* alloc_array(size_t data_size, int type);
 
 void dealloc_array(void* self);
 
+void* realloc_array(void* data, size_t data_size, int type);
+
 
 #endif

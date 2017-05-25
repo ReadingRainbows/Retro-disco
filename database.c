@@ -25,7 +25,7 @@ File descriptor fopen(pathname,const char* mode) -> r,w,a,r+,w+,a+
  * Create database from a name given or open the existing one and alloc mem for data pool.
  * Return a file descriptor. 
  */
-struct Connection* open_database(const char* filename) {
+struct Connection* open_database(const char* filename, int max_data, int max_rows) {
 
     struct Connection *conn = malloc(sizeof(struct Connection)); 
     if(!conn)
@@ -35,6 +35,8 @@ struct Connection* open_database(const char* filename) {
     if(!conn->db)
 	exit(1);
 
+    conn->db->max_data = max_data;
+    conn->db->max_rows = max_rows;
     
     if(0 == access(filename, O_RDWR)) {
        conn->file = fopen(filename, "r+"); //File exist
@@ -42,11 +44,11 @@ struct Connection* open_database(const char* filename) {
     else {
 	conn->file = fopen(filename, "w"); //File doesn't exist
     }
-
 	
     if(!conn->file)
 	exit(1);
-       
+   
+    populate_database(conn);
     return conn;
 }
 
@@ -55,9 +57,23 @@ struct Connection* open_database(const char* filename) {
  * Return error code 
  */
 void read_database(struct Connection* conn) {
-    int rc = fread(conn->db, sizeof(struct Database), 1, conn->file);
-    if(rc != 1)
-	exit(1);
+    int rc = 0;
+    int i = 0;
+    rc = fread(&conn->db->max_data, sizeof(int), 1, conn->file);
+    rc = fread(&conn->db->max_rows, sizeof(int), 1, conn->file);
+
+    for(i = 0; i < conn->db->max_rows; ++i) {
+	rc = 0;
+	rc += fread(&conn->db->rows[i].ID, sizeof(unsigned int), 1, conn->file);
+	rc += fread(&conn->db->rows[i].is_set, sizeof(unsigned int), 1, conn->file);
+	rc += fread(conn->db->rows[i].operation_type, sizeof(char) * conn->db->max_data, 1, conn->file);
+	rc += fread(&conn->db->rows[i].money, sizeof(unsigned int), 1, conn->file);
+	rc += fread(&conn->db->rows[i].time, sizeof(time_t), 1, conn->file);
+	if(rc != 5) {
+	    close_database(conn);
+	    // exit(1);
+	}
+    } 
     //fread
     // Read file and cast to mem.
 }
@@ -69,21 +85,38 @@ void read_database(struct Connection* conn) {
 void populate_database(struct Connection* conn) {
     int i = 0;
 
-    for(i = 0; i < MAX_ROWS; i++) {
-	struct Operation operation = {.ID = i, .is_set = 0};
+    struct Operation* db_rows = malloc(sizeof(struct Operation)*conn->db->max_rows);
+    conn->db->rows = db_rows;
 
-	conn->db->rows[i] = operation;
+    for(i = 0; i < conn->db->max_rows; i++) {
+	struct Operation operation = {.ID = i, .is_set = 0};
+	
+	memcpy(&conn->db->rows[i], &operation, sizeof(struct Operation));
+	conn->db->rows[i].operation_type = malloc(sizeof(char) * conn->db->max_data);
+	memset(conn->db->rows[i].operation_type, 0, sizeof(char) * conn->db->max_data);
     }
 }
 
 
 
 void close_database(struct Connection* conn) {
+    int i = 0;
+
     if(conn) {
-	if(conn->file)
-	    fclose(conn->file);
-	if(conn->db)
+	if(conn->db) {
+
+	    if(conn->db->rows) {
+		for(i = 0; i < conn->db->max_rows; ++i) {
+		    free(conn->db->rows[i].operation_type);
+		    conn->db->rows[i].operation_type = NULL;
+		}
+	    }
+
+	    free(conn->db->rows);
+	    conn->db->rows = NULL;
 	    free(conn->db);
+	    conn->db = NULL;
+	}
 	free(conn);
 	conn = NULL;
     }
@@ -93,13 +126,31 @@ void close_database(struct Connection* conn) {
  * return sucess or fail
  */
 int write_database(struct Connection* conn) {
+    int wc = 0;
+    int i = 0;
+    int ret = 0;
+
     rewind(conn->file); //return file position to 0.
 
-    int wc = fwrite(conn->db, sizeof(struct Database), 1, conn->file); //overwrite new database
-    if(wc != 1)
-	exit(1);
+    //write column and rows in file to be sure to read it correctly after
+    wc += fwrite(&conn->db->max_data, sizeof(int), 1, conn->file);
+    wc += fwrite(&conn->db->max_rows, sizeof(int), 1, conn->file);
 
-    int ret = fflush(conn->file);
+    //right every single case "Operation" in the database
+    for(i = 0; i < conn->db->max_rows; ++i) {
+	wc = 0;
+	wc += fwrite(&conn->db->rows[i].ID, sizeof(unsigned int), 1, conn->file);
+	wc += fwrite(&conn->db->rows[i].is_set, sizeof(unsigned int), 1, conn->file);
+	wc += fwrite(conn->db->rows[i].operation_type, sizeof(char)*conn->db->max_data, 1, conn->file);
+	wc += fwrite(&conn->db->rows[i].money, sizeof(int), 1, conn->file);
+	wc += fwrite(&conn->db->rows[i].time, sizeof(time_t), 1, conn->file);
+//	if(wc != 5)
+
+    }
+
+    //error handling for wc!
+
+    ret = fflush(conn->file);
     if(ret != 0)
 	exit(1);
 
@@ -117,11 +168,14 @@ void set_database(struct Connection* conn, int id, int amount_money, const char*
     //struct Operation operation = {.is_set = 1, .operation_type = operation, .money = money, .time = time(NULL)};
     struct Operation* operation = &conn->db->rows[id];
 
+    if(operation->is_set)
+	return;
     operation->is_set = 1;
 
-    char* res = strncpy(operation->operation_type, operation_done, MAX_DATAS);
+    char* res = strncpy(operation->operation_type, operation_done, conn->db->max_data);
     if(!res)
 	exit(1);
+
 
     operation->money = amount_money;
 
@@ -134,37 +188,41 @@ void set_database(struct Connection* conn, int id, int amount_money, const char*
  * return valuelinkedin
  */
 struct Operation* get_database(struct Connection* conn, Data_type_union data, Data_type dataType) {
-    int k = 0;
     int i = 0;
     int j = 0;
 
     // return arrays of connection equal to the data needed
     //struct Operation* ret = malloc(sizeof(sizeof(int) + struct Operation)*MAX_ROWS); // ALLOC FROM CALLER????
-    struct Operation* tmp = malloc(sizeof(struct Operation)*MAX_ROWS);
+    //   struct Operation* tmp = malloc(sizeof(struct Operation)*conn->db->max_rows);
+    struct Operation* tmp = alloc_array(sizeof(struct Operation)*conn->db->max_rows, conn->db->max_rows);
     if(!tmp)
 	exit(1);
     switch(dataType){
     case MONEY:
-	for(i = 0; i < MAX_ROWS; i++) {
+	for(i = 0; i < conn->db->max_rows; ++i) {
 	    if(conn->db->rows[i].money == data.i){
-		tmp[j] = conn->db->rows[i];
+		memcpy(&tmp[j], &conn->db->rows[i], sizeof(struct Operation));
 		j++;
 	    }
 	}
 	break;
     case TIME:
-	for(i = 0; i < MAX_ROWS; i++) {
+	for(i = 0; i < conn->db->max_rows; ++i) {
 	    if(conn->db->rows[i].time == data.t){
-		tmp[j] = conn->db->rows[i];
+		memcpy(&tmp[j], &conn->db->rows[i], sizeof(struct Operation));
 		j++;
 	    }
 	}
 	break;
     case OPERATION_TYPE:
-	for(i = 0; i < MAX_ROWS; i++) {
-	    if(strncmp( (const char*) conn->db->rows[i].operation_type, data.ucptr, MAX_DATAS) == 0) {
-		tmp[j] = conn->db->rows[i];
-		j++;
+	for(i = 0; i < conn->db->max_rows; ++i) {
+	    if(conn->db->rows[i].operation_type){
+		if(strncmp(conn->db->rows[i].operation_type, data.ucptr, conn->db->max_data) == 0) {
+		    memcpy(&tmp[j], &conn->db->rows[i], sizeof(struct Operation));
+		    tmp[j].operation_type = malloc(sizeof(char) * conn->db->max_data);
+		    strncpy(tmp[j].operation_type, data.ucptr, conn->db->max_data);
+		    j++;
+		}
 	    }
 	}
 	break;
@@ -172,14 +230,14 @@ struct Operation* get_database(struct Connection* conn, Data_type_union data, Da
 	printf("NO OPERATION CORRESPONDING TO THE ONE SPECIFIED!");
 	break;
     }
-//ret - sizeof(struct Header) = j; //DOES IT WORKS LIKE THIS?
-    //ret[-1] = j; // OR LIKE THIS?
-    struct Operation* ret = alloc_array(sizeof(struct Operation)*j, j);
+    return (struct Operation*) realloc_array(tmp, sizeof(struct Operation)*j, j);
+    
+/*    struct Operation* ret = alloc_array(sizeof(struct Operation)*j, j);
     for(k = 0; k < j; ++k) {
 	ret[k] = tmp[k];
     }
-    free(tmp);
-    return ret; 
+      free(tmp);
+      return ret; */
     
     // set in mem values.
 }
@@ -209,10 +267,11 @@ void display_database(struct Connection* conn) {
 void reset_database(struct Connection* conn) {
     //recursively set database to 0.
     int i = 0;
-    struct Operation operation = {.ID = 0, .is_set = 0, .operation_type = {0}, .money = 0, .time = 0 };
+    struct Operation operation = {.ID = 0, .is_set = 0, .operation_type = NULL, .money = 0, .time = 0 };
     
-    for(i = 0; i < MAX_ROWS ; ++i) {
-	conn->db->rows[i] = operation;
+    for(i = 0; i < conn->db->max_rows ; ++i) {
+	free(conn->db->rows[i].operation_type);
+	memcpy(&conn->db->rows[i], &operation, sizeof(struct Operation));
     }
     
 }
@@ -225,11 +284,11 @@ void delete_database(struct Connection* conn){
     //1. get path name with readlink from /proc/self/fd/NNN where NNN is the fd
     //2. verify that the file descriptor is not moved or deleted, stat the filename given by readlink + fpath with the fd and verify for st_dev and st_ino are the same
 
-    char filedescriptor[MAX_DATAS] = {"/proc/self/fd/"};
+    char filedescriptor[512] = {"/proc/self/fd/"};
     char* filepath = NULL;
     size_t filepathlenght;
 
-    char path_ptr[MAX_DATAS] = {'\0'};
+    char path_ptr[512] = {'\0'};
 
     snprintf(path_ptr, sizeof(filedescriptor), "%d", fileno(conn->file)); //revoir attribution de la mémoire.
     strcat(filedescriptor, path_ptr);
@@ -237,7 +296,7 @@ void delete_database(struct Connection* conn){
     filepathlenght = strlen(filedescriptor);
     filepath = (char*)malloc(filepathlenght);
     memcpy(filepath, filedescriptor, filepathlenght);
-    int ret = readlink(filedescriptor, path_ptr, MAX_DATAS);
+    int ret = readlink(filedescriptor, path_ptr, 512);
     if(ret < 0)
 	exit(1);
 
@@ -249,7 +308,7 @@ void delete_database(struct Connection* conn){
     if(access(path_ptr, F_OK) == 0) {
 	ret = remove(path_ptr);
 	printf("File to delete : %s", path_ptr);
-	if(!ret)
+	if(ret)
 	    exit(1);
     }
 

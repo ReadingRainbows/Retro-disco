@@ -10,6 +10,15 @@ void* alloc_array(size_t data_size, int type) {
     return((void*)head) + sizeof(struct Header);
 }
 
+void* realloc_array(void* data, size_t data_size, int type) {
+    struct Header* realloc_data = data - sizeof(struct Header);
+    struct Header* head = realloc(realloc_data, sizeof(struct Header) + data_size);
+
+    head->type = type;
+
+    return((void*)head) + sizeof(struct Header);
+}
+
 void dealloc_array(void* self) {
     struct Header* head = self - sizeof(struct Header);
     free(head);

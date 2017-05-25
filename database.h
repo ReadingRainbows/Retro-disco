@@ -3,20 +3,6 @@
 #ifndef _file_handling_h
 #define _file_handling_h
 
-/*
-File descriptor open(pathname,flags,mode)
-numread read(fd,buffer,count)
-numwrite write(fd,buffer,count)
-status close(fd)
-File descriptor fopen(pathname,const char* mode) -> r,w,a,r+,w+,a+
-*/
-
-#ifndef BUF_SIZE 
-#define BUF_SIZE 1024
-#endif
-
-#define MAX_ROWS 512
-#define MAX_DATAS 512
 
 /*  SPEC POUR LA DATABASE
  * 1. possibilités de plusieurs databases
@@ -35,7 +21,7 @@ typedef enum DataType {
 typedef union DataTypeUnion {
     unsigned int i;
     time_t t;
-    char ucptr[MAX_DATAS];
+    char* ucptr;
 } Data_type_union;
 /*
  * Column of database
@@ -43,7 +29,7 @@ typedef union DataTypeUnion {
 struct Operation {
   unsigned int ID;
   unsigned int is_set;
-  char operation_type[MAX_DATAS];
+  char* operation_type;
   unsigned int money;
   time_t time;
 };
@@ -52,7 +38,9 @@ struct Operation {
  * Rows of database
  */
 struct Database {
-    struct Operation rows[MAX_ROWS]; 
+    int max_data;
+    int max_rows;
+    struct Operation* rows; 
 };
 
 /*
@@ -67,7 +55,7 @@ struct Connection {
  * Create database from a name given or open the existing one and alloc mem for data pool.
  * Return a file descriptor. 
  */
-struct Connection* open_database(const char* filename);
+struct Connection* open_database(const char* filename, int max_data, int max_rows);
 
 /*
  * Open database file and populate the datas in mem
