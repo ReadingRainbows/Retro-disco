@@ -6,20 +6,9 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include "database.h"
 #include "fat_pointers.h"
 
-/*
-File descriptor open(pathname,flags,mode)
-numread read(fd,buffer,count)
-numwrite write(fd,buffer,count)
-status close(fd)
-File descriptor fopen(pathname,const char* mode) -> r,w,a,r+,w+,a+
-*/
-
-/***************************************** NE PAS OUBLIER DE RENDRE ÇA SCALABLE *********************************************************/
 
 /*
  * Create database from a name given or open the existing one and alloc mem for data pool.
@@ -85,8 +74,9 @@ void read_database(struct Connection* conn) {
 void populate_database(struct Connection* conn) {
     int i = 0;
 
-    struct Operation* db_rows = malloc(sizeof(struct Operation)*conn->db->max_rows);
-    conn->db->rows = db_rows;
+//    struct Operation* db_rows = malloc(sizeof(struct Operation)*conn->db->max_rows);
+    conn->db->rows = malloc(sizeof(struct Operation)*conn->db->max_rows);
+    memset(conn->db->rows, 0, sizeof(struct Operation)*conn->db->max_rows);
 
     for(i = 0; i < conn->db->max_rows; i++) {
 	struct Operation operation = {.ID = i, .is_set = 0};
@@ -104,19 +94,18 @@ void close_database(struct Connection* conn) {
 
     if(conn) {
 	if(conn->db) {
-
-	    if(conn->db->rows) {
+	    //if(conn->db->rows) {
 		for(i = 0; i < conn->db->max_rows; ++i) {
 		    free(conn->db->rows[i].operation_type);
 		    conn->db->rows[i].operation_type = NULL;
 		}
-	    }
-
+		//}
 	    free(conn->db->rows);
 	    conn->db->rows = NULL;
 	    free(conn->db);
 	    conn->db = NULL;
 	}
+	fclose(conn->file);
 	free(conn);
 	conn = NULL;
     }
@@ -192,8 +181,6 @@ struct Operation* get_database(struct Connection* conn, Data_type_union data, Da
     int j = 0;
 
     // return arrays of connection equal to the data needed
-    //struct Operation* ret = malloc(sizeof(sizeof(int) + struct Operation)*MAX_ROWS); // ALLOC FROM CALLER????
-    //   struct Operation* tmp = malloc(sizeof(struct Operation)*conn->db->max_rows);
     struct Operation* tmp = alloc_array(sizeof(struct Operation)*conn->db->max_rows, conn->db->max_rows);
     if(!tmp)
 	exit(1);
@@ -232,33 +219,7 @@ struct Operation* get_database(struct Connection* conn, Data_type_union data, Da
     }
     return (struct Operation*) realloc_array(tmp, sizeof(struct Operation)*j, j);
     
-/*    struct Operation* ret = alloc_array(sizeof(struct Operation)*j, j);
-    for(k = 0; k < j; ++k) {
-	ret[k] = tmp[k];
-    }
-      free(tmp);
-      return ret; */
-    
-    // set in mem values.
 }
-
-
-
-/*
- * Display all the database from file descriptor 
- * Return Sucess or fail.
- * Calls read_database recursively until it reaches NULL?
- */
-void display_database(struct Connection* conn) {
-    // read mem for display 
-    if(conn->db) {
-	int bob = 1 + 1;
-	bob++;
-	if(bob == 0)
-	    exit(1);
-    }
-}
-
 
 /*
  * reset database to default value
@@ -270,7 +231,6 @@ void reset_database(struct Connection* conn) {
     struct Operation operation = {.ID = 0, .is_set = 0, .operation_type = NULL, .money = 0, .time = 0 };
     
     for(i = 0; i < conn->db->max_rows ; ++i) {
-	free(conn->db->rows[i].operation_type);
 	memcpy(&conn->db->rows[i], &operation, sizeof(struct Operation));
     }
     
@@ -281,38 +241,33 @@ void reset_database(struct Connection* conn) {
  * return sucess or fail.
  */
 void delete_database(struct Connection* conn){
-    //1. get path name with readlink from /proc/self/fd/NNN where NNN is the fd
-    //2. verify that the file descriptor is not moved or deleted, stat the filename given by readlink + fpath with the fd and verify for st_dev and st_ino are the same
 
     char filedescriptor[512] = {"/proc/self/fd/"};
-    char* filepath = NULL;
-    size_t filepathlenght;
+    //char* filepath = NULL;
+    //size_t filepathlenght;
 
     char path_ptr[512] = {'\0'};
 
     snprintf(path_ptr, sizeof(filedescriptor), "%d", fileno(conn->file)); //revoir attribution de la mémoire.
     strcat(filedescriptor, path_ptr);
     memset(path_ptr, 0, sizeof(char)*20);
-    filepathlenght = strlen(filedescriptor);
-    filepath = (char*)malloc(filepathlenght);
-    memcpy(filepath, filedescriptor, filepathlenght);
+    //filepathlenght = strlen(filedescriptor);
+    //filepath = (char*)malloc(filepathlenght);
+    //memcpy(filepath, filedescriptor, filepathlenght);
     int ret = readlink(filedescriptor, path_ptr, 512);
     if(ret < 0)
 	exit(1);
 
-    printf("\nFile descriptor pathname: %s\n", path_ptr);
 
     if(!ret)
 	exit(1);
 
     if(access(path_ptr, F_OK) == 0) {
 	ret = remove(path_ptr);
-	printf("File to delete : %s", path_ptr);
+	printf("File deleted : %s", path_ptr);
 	if(ret)
 	    exit(1);
     }
 
     close_database(conn);
-
-    //exit program????
 }

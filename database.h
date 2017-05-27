@@ -98,13 +98,6 @@ void set_database(struct Connection* conn, int id, int amount_money, const char*
 struct Operation* get_database(struct Connection* conn, Data_type_union data, Data_type dataType);
     
 /*
- * Display all the database from file descriptor 
- * Return Sucess or fail.
- * Calls read_database recursively until it reaches NULL?
- */
-void display_database(struct Connection* conn);
-
-/*
  * reset database to default value
  * return sucess or fail.
  */

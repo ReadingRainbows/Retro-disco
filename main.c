@@ -2,8 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include "interpreter.h"
 
 #define VERSION "0.0.1"

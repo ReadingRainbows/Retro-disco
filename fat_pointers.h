@@ -12,5 +12,6 @@ void dealloc_array(void* self);
 
 void* realloc_array(void* data, size_t data_size, int type);
 
+int get_array_length(void* data); 
 
 #endif

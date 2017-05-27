@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "interpreter.h"
-#include "budget.h"
+#include "debug.h"
 
 #define ENTRY_TABLE_SIZE 5 
 

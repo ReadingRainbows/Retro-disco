@@ -23,3 +23,8 @@ void dealloc_array(void* self) {
     struct Header* head = self - sizeof(struct Header);
     free(head);
 }
+
+int get_array_length(void* data) {
+    struct Header* array_length = data - sizeof(struct Header);
+    return array_length->type;
+}

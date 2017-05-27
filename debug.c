@@ -8,9 +8,8 @@
 static struct Connection* conn = NULL;
 
 struct Connection* init_debug(void) {
-    struct Connection* connection = malloc(sizeof(struct Connection));
+    struct Connection* connection = NULL; 
     connection = open_database("bob", 512, 512);
-    populate_database(connection);
     return connection;
 }
 
@@ -20,8 +19,9 @@ void debug_database(int* routine) {
     Data_type_union case1 = {.ucptr = "substract"};
     Data_type_union case2 = {.i = 5};
     Data_type_union case2_1 = {.ucptr = "add"};
-    struct Connection* connection = malloc(sizeof(struct Connection));
+    struct Connection* connection = NULL;
     int i = 0;
+    int j = 0;
     
 
     if(!conn) {
@@ -35,6 +35,9 @@ void debug_database(int* routine) {
 	get_conn_to_free = (struct Operation*) get_database(conn, case0, MONEY);
 	printf("\nMontant 1: %d \nMontant 2: %d", get_conn_to_free[0].money, get_conn_to_free[1].money);
 	write_database(conn);
+	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
+	    free(get_conn_to_free[j].operation_type);
+	}
 	dealloc_array(get_conn_to_free);
 	break;
     case 1:
@@ -43,6 +46,9 @@ void debug_database(int* routine) {
 	get_conn_to_free = (struct Operation*) get_database(conn, case1, OPERATION_TYPE);
 	printf("\nOperation 1: %s \nOperation 2: %s ", get_conn_to_free[0].operation_type, get_conn_to_free[1].operation_type);
 	write_database(conn);
+	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
+	    free(get_conn_to_free[j].operation_type);
+	}
 	dealloc_array(get_conn_to_free);
 	break;
     case 2:
@@ -55,9 +61,15 @@ void debug_database(int* routine) {
 	read_database(connection);
         get_conn_to_free = get_database(connection, case2, MONEY);
 	printf("\nMontant 1: %d ", get_conn_to_free[0].money);
+	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
+	    free(get_conn_to_free[j].operation_type);
+	}
 	dealloc_array(get_conn_to_free);
 	get_conn_to_free = get_database(connection, case2_1, OPERATION_TYPE);
 	printf("\nOperation 1: %s", get_conn_to_free[0].operation_type);
+	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
+	    free(get_conn_to_free[j].operation_type);
+	}
 	dealloc_array(get_conn_to_free);
 	delete_database(connection);
 	break;
@@ -71,6 +83,7 @@ void debug_database(int* routine) {
 	}
 	debug_write_database(connection);
 	delete_database(connection);
+	break;
     default:
 	close_database(conn);
 	break;
@@ -79,8 +92,8 @@ void debug_database(int* routine) {
 }
 
 void test_write_read(void) {
-    struct Connection* connectionWritten = malloc(sizeof(struct Connection));
-    struct Connection* connectionRead = malloc(sizeof(struct Connection)); 
+    struct Connection* connectionWritten = NULL;
+    struct Connection* connectionRead = NULL; 
 
     connectionWritten = open_database("george",512,512);
     connectionRead = open_database("gontrand",512,512);
