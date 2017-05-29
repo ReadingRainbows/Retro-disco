@@ -24,6 +24,6 @@ void cmd_add(args_t* args);
 void cmd_substract(args_t* args);
 void cmd_set(args_t* args);
 void cmd_exit(args_t* args);
-void cmd_debug(args_t* args);
+void cmd_debug_database(args_t* args);
 
 #endif

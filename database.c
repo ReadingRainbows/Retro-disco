@@ -59,12 +59,9 @@ void read_database(struct Connection* conn) {
 	rc += fread(&conn->db->rows[i].money, sizeof(unsigned int), 1, conn->file);
 	rc += fread(&conn->db->rows[i].time, sizeof(time_t), 1, conn->file);
 	if(rc != 5) {
-	    close_database(conn);
 	    // exit(1);
 	}
     } 
-    //fread
-    // Read file and cast to mem.
 }
 
 /*
@@ -94,12 +91,12 @@ void close_database(struct Connection* conn) {
 
     if(conn) {
 	if(conn->db) {
-	    //if(conn->db->rows) {
+	    if(conn->db->rows) {
 		for(i = 0; i < conn->db->max_rows; ++i) {
 		    free(conn->db->rows[i].operation_type);
 		    conn->db->rows[i].operation_type = NULL;
 		}
-		//}
+	    }
 	    free(conn->db->rows);
 	    conn->db->rows = NULL;
 	    free(conn->db);
@@ -133,8 +130,6 @@ int write_database(struct Connection* conn) {
 	wc += fwrite(conn->db->rows[i].operation_type, sizeof(char)*conn->db->max_data, 1, conn->file);
 	wc += fwrite(&conn->db->rows[i].money, sizeof(int), 1, conn->file);
 	wc += fwrite(&conn->db->rows[i].time, sizeof(time_t), 1, conn->file);
-//	if(wc != 5)
-
     }
 
     //error handling for wc!
@@ -154,7 +149,6 @@ int write_database(struct Connection* conn) {
  */
 void set_database(struct Connection* conn, int id, int amount_money, const char* operation_done) {
 
-    //struct Operation operation = {.is_set = 1, .operation_type = operation, .money = money, .time = time(NULL)};
     struct Operation* operation = &conn->db->rows[id];
 
     if(operation->is_set)
@@ -208,7 +202,7 @@ struct Operation* get_database(struct Connection* conn, Data_type_union data, Da
 		    memcpy(&tmp[j], &conn->db->rows[i], sizeof(struct Operation));
 		    tmp[j].operation_type = malloc(sizeof(char) * conn->db->max_data);
 		    strncpy(tmp[j].operation_type, data.ucptr, conn->db->max_data);
-		    j++;
+		    ++j;
 		}
 	    }
 	}
@@ -243,17 +237,12 @@ void reset_database(struct Connection* conn) {
 void delete_database(struct Connection* conn){
 
     char filedescriptor[512] = {"/proc/self/fd/"};
-    //char* filepath = NULL;
-    //size_t filepathlenght;
 
     char path_ptr[512] = {'\0'};
 
     snprintf(path_ptr, sizeof(filedescriptor), "%d", fileno(conn->file)); //revoir attribution de la mémoire.
     strcat(filedescriptor, path_ptr);
     memset(path_ptr, 0, sizeof(char)*20);
-    //filepathlenght = strlen(filedescriptor);
-    //filepath = (char*)malloc(filepathlenght);
-    //memcpy(filepath, filedescriptor, filepathlenght);
     int ret = readlink(filedescriptor, path_ptr, 512);
     if(ret < 0)
 	exit(1);

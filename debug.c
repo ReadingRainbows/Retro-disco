@@ -7,91 +7,102 @@
 
 static struct Connection* conn = NULL;
 
-struct Connection* init_debug(void) {
-    struct Connection* connection = NULL; 
-    connection = open_database("bob", 512, 512);
-    return connection;
+void debug_database(int* routine) {
+    
+    switch(*routine) {
+    case 0:
+	routine_check_memory_money();
+	break;
+    case 1:
+	routine_check_memory_operation();
+	break;
+    case 2:
+	routine_read_file();
+	break;
+    case 3:
+	routine_test_write_read();
+	break;
+    case 4:
+	routine_write_file_human_readable();
+	break;
+    default:
+	if(conn) {
+	    close_database(conn);
+	}
+	break;
+    }
+
 }
 
-void debug_database(int* routine) {
+void routine_check_memory_money(void) {
     struct Operation* get_conn_to_free = NULL;
+    struct Connection* conn = NULL;
     Data_type_union case0 = {.i = 100};
+    conn = open_database("bob", 512, 512);
+    set_database(conn, 0, 100, "add");
+    set_database(conn, 248, 100, "add");
+    get_conn_to_free = (struct Operation*) get_database(conn, case0, MONEY);
+    printf("\nMontant 1: %d \nMontant 2: %d", get_conn_to_free[0].money, get_conn_to_free[1].money);
+    write_database(conn);
+    dealloc_array(get_conn_to_free);
+    close_database(conn);
+}
+
+void routine_check_memory_operation(void) {
+    struct Operation* get_conn_to_free = NULL;
+    struct Connection* conn = NULL;
     Data_type_union case1 = {.ucptr = "substract"};
+    int j = 0;
+    conn = open_database("bob", 512, 512);
+    set_database(conn, 1, 99, "substract");
+    set_database(conn, 365, 98, "substract");
+    get_conn_to_free = (struct Operation*) get_database(conn, case1, OPERATION_TYPE);
+    printf("\nOperation 1: %s \nOperation 2: %s ", get_conn_to_free[0].operation_type, get_conn_to_free[1].operation_type);
+    write_database(conn);
+    for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
+	free(get_conn_to_free[j].operation_type);
+    }
+    dealloc_array(get_conn_to_free);
+    close_database(conn);
+}
+
+void routine_read_file(void) {
+    struct Operation* get_conn_to_free = NULL;
     Data_type_union case2 = {.i = 5};
     Data_type_union case2_1 = {.ucptr = "add"};
     struct Connection* connection = NULL;
-    int i = 0;
     int j = 0;
-    
-
-    if(!conn) {
-	conn = init_debug();
+    connection = open_database("robert", 512, 512);
+    set_database(connection, 2, 5, "set");
+    set_database(connection, 250, 10000, "add");
+    write_database(connection);
+    close_database(connection);
+    connection = open_database("robert", 512, 512);
+    read_database(connection);
+    get_conn_to_free = get_database(connection, case2, MONEY);
+    printf("\nMontant 1: %d ", get_conn_to_free[0].money);
+    dealloc_array(get_conn_to_free);
+    get_conn_to_free = get_database(connection, case2_1, OPERATION_TYPE);
+    printf("\nOperation 1: %s", get_conn_to_free[0].operation_type);
+    for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
+	free(get_conn_to_free[j].operation_type);
     }
-
-    switch(*routine) {
-    case 0:
-	set_database(conn, 0, 100, "add");
-	set_database(conn, 248, 100, "add");
-	get_conn_to_free = (struct Operation*) get_database(conn, case0, MONEY);
-	printf("\nMontant 1: %d \nMontant 2: %d", get_conn_to_free[0].money, get_conn_to_free[1].money);
-	write_database(conn);
-	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
-	    free(get_conn_to_free[j].operation_type);
-	}
-	dealloc_array(get_conn_to_free);
-	break;
-    case 1:
-	set_database(conn, 1, 99, "substract");
-	set_database(conn, 365, 98, "substract");
-	get_conn_to_free = (struct Operation*) get_database(conn, case1, OPERATION_TYPE);
-	printf("\nOperation 1: %s \nOperation 2: %s ", get_conn_to_free[0].operation_type, get_conn_to_free[1].operation_type);
-	write_database(conn);
-	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
-	    free(get_conn_to_free[j].operation_type);
-	}
-	dealloc_array(get_conn_to_free);
-	break;
-    case 2:
-        connection = open_database("robert", 512, 512);
-	set_database(connection, 2, 5, "set");
-	set_database(connection, 250, 10000, "add");
-	write_database(connection);
-	close_database(connection);
-	connection = open_database("robert", 512, 512);
-	read_database(connection);
-        get_conn_to_free = get_database(connection, case2, MONEY);
-	printf("\nMontant 1: %d ", get_conn_to_free[0].money);
-	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
-	    free(get_conn_to_free[j].operation_type);
-	}
-	dealloc_array(get_conn_to_free);
-	get_conn_to_free = get_database(connection, case2_1, OPERATION_TYPE);
-	printf("\nOperation 1: %s", get_conn_to_free[0].operation_type);
-	for(j = 0; j < get_array_length(get_conn_to_free); ++j) {
-	    free(get_conn_to_free[j].operation_type);
-	}
-	dealloc_array(get_conn_to_free);
-	delete_database(connection);
-	break;
-    case 3:
-	test_write_read();
-	break;
-    case 4:
-	connection = open_database("richard",512,512);
-	for(i = 0; i < connection->db->max_data; ++i) {
-	    set_database(connection, i, i, "set");
-	}
-	debug_write_database(connection);
-	delete_database(connection);
-	break;
-    default:
-	close_database(conn);
-	break;
-    }
-
+    dealloc_array(get_conn_to_free);
+    delete_database(connection);
 }
 
-void test_write_read(void) {
+void routine_write_file_human_readable(void) {
+    struct Connection* connection = NULL;
+    int i = 0;
+    connection = open_database("richard",512,512);
+    for(i = 0; i < connection->db->max_data; ++i) {
+	set_database(connection, i, i, "set");
+    }
+    debug_write_database(connection);
+    delete_database(connection);
+}
+
+void routine_test_write_read(void) {
     struct Connection* connectionWritten = NULL;
     struct Connection* connectionRead = NULL; 
 
@@ -112,11 +123,11 @@ void debug_read_database(struct Connection* connRead, struct Connection* connWri
     rc = fread(&connRead->db->max_data, sizeof(int), 1, connWritten->file);
     rc = fread(&connRead->db->max_rows, sizeof(int), 1, connWritten->file);
 
-    for(i = 0; i < conn->db->max_rows; ++i) {
+    for(i = 0; i < connRead->db->max_rows; ++i) {
 	rc = 0;
 	rc += fread(&connRead->db->rows[i].ID, sizeof(unsigned int), 1, connWritten->file);
 	rc += fread(&connRead->db->rows[i].is_set, sizeof(unsigned int), 1, connWritten->file);
-	rc += fread(&connRead->db->rows[i].operation_type, sizeof(char) * conn->db->max_data, 1, connWritten->file);
+	rc += fread(&connRead->db->rows[i].operation_type, sizeof(char) * connRead->db->max_data, 1, connWritten->file);
 	rc += fread(&connRead->db->rows[i].money, sizeof(unsigned int), 1, connWritten->file);
 	rc += fread(&connRead->db->rows[i].time, sizeof(time_t), 1, connWritten->file);
     } 

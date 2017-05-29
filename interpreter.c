@@ -14,7 +14,7 @@ entry_t tab[] = {
 	{"substract", cmd_substract, "i", "Substract money to database."},
 	{"set", cmd_set, "i", "Set money amount to database."},
 	{"exit", cmd_exit, " ", "Exit the program."},
-	{"debug", cmd_debug, "i", "Routine to debug the program"},
+	{"debug_database", cmd_debug_database, "i", "Routine to debug the program"},
 };
 
 void cmd_add(args_t* args)
@@ -39,7 +39,7 @@ void cmd_exit(args_t* args)
 	exit(0);
 }
 
-void cmd_debug(args_t* args)
+void cmd_debug_database(args_t* args)
 {
     int* i = &args->i;
     fprintf(stdout, "CMD_DEBUG -> arg : %d", args->i);
